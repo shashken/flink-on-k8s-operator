@@ -118,12 +118,20 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  annotations:
   name: cert-job
   namespace: {{ .Values.flinkOperatorNamespace.name }}
   labels:
     app.kubernetes.io/name: flink-operator
     app.kubernetes.io/component: cert-job
+    app.kubernetes.io/managed-by: { { .Release.Service | quote } }
+    app.kubernetes.io/instance: { { .Release.Name | quote } }
+    app.kubernetes.io/version: { { .Chart.AppVersion } }
+  annotations:
+    # This is what defines this resource as a hook. Without this line, the
+    # job is considered part of the release.
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "-5"
 spec:
   ttlSecondsAfterFinished: 300
   backoffLimit: 0

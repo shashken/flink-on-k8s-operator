@@ -194,7 +194,7 @@ func (c *FlinkClient) TakeSavepoint(
 		return SavepointStatus{}, err
 	}
 
-	for i := 0; i < 12; i++ {
+	for i := 0; i < 720; i++ {
 		status, err = c.GetSavepointStatus(apiBaseURL, jobID, triggerID.RequestID)
 		if err == nil && status.Completed {
 			return status, nil
