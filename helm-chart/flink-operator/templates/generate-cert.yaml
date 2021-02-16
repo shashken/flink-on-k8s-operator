@@ -1,4 +1,4 @@
-{{- if and (.Values.rbac.create) (not .Values.certificateSecretProviderClass) }}
+{{- if and (.Values.rbac.create) (not .Values.caCertificateSecretProviderClass) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

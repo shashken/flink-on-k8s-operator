@@ -353,12 +353,12 @@ spec:
       terminationGracePeriodSeconds: 10
       volumes:
       - name: cert
-  {{- if .Values.certificateSecretProviderClass }}
+  {{- if .Values.caCertificateSecretProviderClass }}
         csi:
           driver: secrets-store.csi.k8s.io
           readOnly: true
           volumeAttributes:
-            secretProviderClass: "{{ .Values.certificateSecretProviderClass }}"
+            secretProviderClass: "{{ .Values.caCertificateSecretProviderClass }}"
   {{- else}}
         secret:
           defaultMode: 420

@@ -48,7 +48,9 @@ podAnnotations: {}
 
 # Labels to be added to pods
 podLabels: {}
-certificateSecretProviderClass:
+caCertificateSecretProviderClass:
+caCertificateSecretName:
+
 
 nodeSelector: {}
 tolerations: {}
