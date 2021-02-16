@@ -46,5 +46,9 @@ resources:
 # Annotations to be added to pods
 podAnnotations: {}
 
+# Labels to be added to pods
+podLabels: {}
+certificateSecretProviderClass:
+
 nodeSelector: {}
 tolerations: {}
