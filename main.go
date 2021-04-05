@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"os"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -52,6 +53,7 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var watchNamespace string
+	var minReconcileDuration time.Duration
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
@@ -63,12 +65,14 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.Logger(true))
+	minReconcileDuration = 1 * time.Minute
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		LeaderElection:     enableLeaderElection,
 		Namespace:          watchNamespace,
+		SyncPeriod:         &minReconcileDuration, // Min time between reconciles,
 	})
 	if err != nil {
 		setupLog.Error(err, "Unable to start manager")

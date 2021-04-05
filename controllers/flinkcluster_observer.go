@@ -51,10 +51,10 @@ type ObservedClusterState struct {
 	cluster           *v1beta1.FlinkCluster
 	revisions         []*appsv1.ControllerRevision
 	configMap         *corev1.ConfigMap
-	jmStatefulSet      *appsv1.StatefulSet
+	jmStatefulSet     *appsv1.StatefulSet
 	jmService         *corev1.Service
 	jmIngress         *extensionsv1beta1.Ingress
-	tmStatefulSet      *appsv1.StatefulSet
+	tmStatefulSet     *appsv1.StatefulSet
 	job               *batchv1.Job
 	jobPod            *corev1.Pod
 	flinkJobStatus    FlinkJobStatus
@@ -82,6 +82,7 @@ func (observer *ClusterStateObserver) observe(
 	observed *ObservedClusterState) error {
 	var err error
 	var log = observer.log
+	var debugLog = log.V(9)
 
 	// Cluster state.
 	var observedCluster = new(v1beta1.FlinkCluster)
@@ -91,10 +92,10 @@ func (observer *ClusterStateObserver) observe(
 			log.Error(err, "Failed to get the cluster resource")
 			return err
 		}
-		log.Info("Observed cluster", "cluster", "nil")
+		debugLog.Info("Observed cluster", "cluster", "nil")
 		observedCluster = nil
 	} else {
-		log.Info("Observed cluster", "cluster", *observedCluster)
+		debugLog.Info("Observed cluster", "cluster", *observedCluster)
 		observed.cluster = observedCluster
 	}
 
@@ -106,13 +107,13 @@ func (observer *ClusterStateObserver) observe(
 			log.Error(err, "Failed to get the controllerRevision resource list")
 			return err
 		}
-		log.Info("Observed controllerRevisions", "controllerRevisions", "nil")
+		debugLog.Info("Observed controllerRevisions", "controllerRevisions", "nil")
 	} else {
 		var b strings.Builder
 		for _, cr := range observedRevisions {
 			fmt.Fprintf(&b, "{name: %v, revision: %v},", cr.Name, cr.Revision)
 		}
-		log.Info("Observed controllerRevisions", "controllerRevisions", fmt.Sprintf("[%v]", b.String()))
+		debugLog.Info("Observed controllerRevisions", "controllerRevisions", fmt.Sprintf("[%v]", b.String()))
 		observed.revisions = observedRevisions
 	}
 
@@ -124,10 +125,10 @@ func (observer *ClusterStateObserver) observe(
 			log.Error(err, "Failed to get configMap")
 			return err
 		}
-		log.Info("Observed configMap", "state", "nil")
+		debugLog.Info("Observed configMap", "state", "nil")
 		observedConfigMap = nil
 	} else {
-		log.Info("Observed configMap", "state", *observedConfigMap)
+		debugLog.Info("Observed configMap", "state", *observedConfigMap)
 		observed.configMap = observedConfigMap
 	}
 
@@ -139,10 +140,10 @@ func (observer *ClusterStateObserver) observe(
 			log.Error(err, "Failed to get JobManager StatefulSet")
 			return err
 		}
-		log.Info("Observed JobManager StatefulSet", "state", "nil")
+		debugLog.Info("Observed JobManager StatefulSet", "state", "nil")
 		observedJmStatefulSet = nil
 	} else {
-		log.Info("Observed JobManager StatefulSet", "state", *observedJmStatefulSet)
+		debugLog.Info("Observed JobManager StatefulSet", "state", *observedJmStatefulSet)
 		observed.jmStatefulSet = observedJmStatefulSet
 	}
 
@@ -154,10 +155,10 @@ func (observer *ClusterStateObserver) observe(
 			log.Error(err, "Failed to get JobManager service")
 			return err
 		}
-		log.Info("Observed JobManager service", "state", "nil")
+		debugLog.Info("Observed JobManager service", "state", "nil")
 		observedJmService = nil
 	} else {
-		log.Info("Observed JobManager service", "state", *observedJmService)
+		debugLog.Info("Observed JobManager service", "state", *observedJmService)
 		observed.jmService = observedJmService
 	}
 
@@ -169,10 +170,10 @@ func (observer *ClusterStateObserver) observe(
 			log.Error(err, "Failed to get JobManager ingress")
 			return err
 		}
-		log.Info("Observed JobManager ingress", "state", "nil")
+		debugLog.Info("Observed JobManager ingress", "state", "nil")
 		observedJmIngress = nil
 	} else {
-		log.Info("Observed JobManager ingress", "state", *observedJmIngress)
+		debugLog.Info("Observed JobManager ingress", "state", *observedJmIngress)
 		observed.jmIngress = observedJmIngress
 	}
 
@@ -184,10 +185,10 @@ func (observer *ClusterStateObserver) observe(
 			log.Error(err, "Failed to get TaskManager StatefulSet")
 			return err
 		}
-		log.Info("Observed TaskManager StatefulSet", "state", "nil")
+		debugLog.Info("Observed TaskManager StatefulSet", "state", "nil")
 		observedTmStatefulSet = nil
 	} else {
-		log.Info("Observed TaskManager StatefulSet", "state", *observedTmStatefulSet)
+		debugLog.Info("Observed TaskManager StatefulSet", "state", *observedTmStatefulSet)
 		observed.tmStatefulSet = observedTmStatefulSet
 	}
 
@@ -217,6 +218,7 @@ func (observer *ClusterStateObserver) observeJob(
 	var recordedJobStatus = observed.cluster.Status.Components.Job
 	var err error
 	var log = observer.log
+	var debugLog = log.V(9)
 
 	// Either the cluster has been deleted or it is a session cluster.
 	if observed.cluster == nil || observed.cluster.Spec.Job == nil {
@@ -231,10 +233,10 @@ func (observer *ClusterStateObserver) observeJob(
 			log.Error(err, "Failed to get job")
 			return err
 		}
-		log.Info("Observed job submitter", "state", "nil")
+		debugLog.Info("Observed job submitter", "state", "nil")
 		observedJob = nil
 	} else {
-		log.Info("Observed job submitter", "state", *observedJob)
+		debugLog.Info("Observed job submitter", "state", *observedJob)
 	}
 	observed.job = observedJob
 
@@ -286,6 +288,7 @@ func (observer *ClusterStateObserver) observeFlinkJobStatus(
 	flinkJobID string,
 	flinkJobStatus *FlinkJobStatus) {
 	var log = observer.log
+	var debugLog = log.V(9)
 
 	// Observe following
 	var flinkJob *flinkclient.JobStatus
@@ -295,7 +298,7 @@ func (observer *ClusterStateObserver) observeFlinkJobStatus(
 	// Wait until the job manager is ready.
 	var jmReady = observed.jmStatefulSet != nil && getStatefulSetState(observed.jmStatefulSet) == v1beta1.ComponentStateReady
 	if !jmReady {
-		log.Info(
+		debugLog.Info(
 			"Skip getting Flink job status.",
 			"job manager ready", jmReady)
 		return
@@ -307,10 +310,10 @@ func (observer *ClusterStateObserver) observeFlinkJobStatus(
 	var err = observer.flinkClient.GetJobStatusList(flinkAPIBaseURL, flinkJobList)
 	if err != nil {
 		// It is normal in many cases, not an error.
-		log.Info("Failed to get Flink job status list.", "error", err)
+		debugLog.Info("Failed to get Flink job status list.", "error", err)
 		return
 	}
-	log.Info("Observed Flink job status list", "jobs", flinkJobList.Jobs)
+	debugLog.Info("Observed Flink job status list", "jobs", flinkJobList.Jobs)
 
 	// Initialize flinkJobStatus if flink API is available.
 	flinkJobStatus.flinkJobList = flinkJobList
@@ -341,7 +344,7 @@ func (observer *ClusterStateObserver) observeFlinkJobStatus(
 			"", "unexpected jobs", flinkJobsUnexpected)
 	}
 	if flinkJob != nil {
-		log.Info("Observed Flink job", "flink job", *flinkJob)
+		debugLog.Info("Observed Flink job", "flink job", *flinkJob)
 	}
 
 	return
@@ -445,7 +448,7 @@ func (observer *ClusterStateObserver) observeStatefulSet(
 		if client.IgnoreNotFound(err) != nil {
 			log.Error(err, "Failed to get StatefulSet")
 		} else {
-			log.Info("Deployment not found")
+			log.Info("StatefulSet not found")
 		}
 	}
 	return err
@@ -497,6 +500,7 @@ func (observer *ClusterStateObserver) observeJobResource(
 func (observer *ClusterStateObserver) observeJobPod(
 	observedPod *corev1.Pod) error {
 	var log = observer.log
+	var debugLog = log.V(9)
 	var clusterNamespace = observer.request.Namespace
 	var clusterName = observer.request.Name
 	var podSelector = labels.SelectorFromSet(map[string]string{"job-name": getJobName(clusterName)})
@@ -512,9 +516,9 @@ func (observer *ClusterStateObserver) observeJobPod(
 			log.Error(err, "Failed to get job submitter pod list")
 			return err
 		}
-		log.Info("Observed job submitter pod list", "state", "nil")
+		debugLog.Info("Observed job submitter pod list", "state", "nil")
 	} else {
-		log.Info("Observed job submitter pod list", "state", *podList)
+		debugLog.Info("Observed job submitter pod list", "state", *podList)
 	}
 
 	if podList != nil && len(podList.Items) > 0 {

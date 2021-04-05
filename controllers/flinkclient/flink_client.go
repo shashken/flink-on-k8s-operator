@@ -98,6 +98,19 @@ func (c *FlinkClient) StopJob(
 		fmt.Sprintf("%s/jobs/%s?mode=cancel", apiBaseURL, jobID), []byte{}, &resp)
 }
 
+// StopJob stops a job.
+func (c *FlinkClient) StopJobWithSavepoint(
+	apiBaseURL string, jobID string, dir string) (SavepointTriggerID, error) {
+	var url = fmt.Sprintf("%s/jobs/%s/stop", apiBaseURL, jobID)
+	var jsonStr = fmt.Sprintf(`{
+		"targetDirectory" : "%s",
+		"drain" : false
+	}`, dir)
+	var triggerID = SavepointTriggerID{}
+	var err = c.HTTPClient.Post(url, []byte(jsonStr), &triggerID)
+	return triggerID, err
+}
+
 // TriggerSavepoint triggers an async savepoint operation.
 func (c *FlinkClient) TriggerSavepoint(
 	apiBaseURL string, jobID string, dir string) (SavepointTriggerID, error) {

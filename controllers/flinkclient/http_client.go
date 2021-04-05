@@ -61,7 +61,7 @@ func (c *HTTPClient) doHTTP(
 	method string, url string, body []byte, outStructPtr interface{}) error {
 	httpClient := &http.Client{Timeout: 30 * time.Second}
 	req, err := c.createRequest(method, url, body)
-	c.Log.Info("HTTPClient", "url", url, "method", method, "error", err)
+	c.Log.V(9).Info("HTTPClient", "url", url, "method", method, "error", err)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func (c *HTTPClient) doHTTP(
 	if err != nil {
 		return err
 	}
-	c.Log.Info(
+	c.Log.V(9).Info(
 		"HTTPClient", "status", resp.Status, "body", outStructPtr, "error", err)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		err = &HTTPError{

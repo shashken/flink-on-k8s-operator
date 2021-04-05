@@ -188,7 +188,7 @@ func TestCanTakeSavepoint(t *testing.T) {
 		},
 	}
 	take = canTakeSavepoint(cluster)
-	assert.Equal(t, take, true)
+	assert.Equal(t, take, false)
 
 	// running job and no progressing savepoint
 	savepointDir = "/savepoints"

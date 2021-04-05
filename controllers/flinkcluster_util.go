@@ -142,8 +142,9 @@ func canTakeSavepoint(cluster v1beta1.FlinkCluster) bool {
 	var jobSpec = cluster.Spec.Job
 	var savepointStatus = cluster.Status.Savepoint
 	var jobStatus = cluster.Status.Components.Job
-	return jobSpec != nil && jobSpec.SavepointsDir != nil &&
-		!isJobStopped(jobStatus) &&
+	return jobSpec != nil &&
+		jobSpec.SavepointsDir != nil &&
+		isJobRunning(jobStatus) &&
 		(savepointStatus == nil || savepointStatus.State != v1beta1.SavepointStateInProgress)
 }
 
@@ -371,6 +372,10 @@ func getSavepointEvent(status v1beta1.SavepointStatus) (eventType string, eventR
 func isJobActive(status *v1beta1.JobStatus) bool {
 	return status != nil &&
 		(status.State == v1beta1.JobStateRunning || status.State == v1beta1.JobStatePending)
+}
+
+func isJobRunning(status *v1beta1.JobStatus) bool {
+	return status != nil && status.State == v1beta1.JobStateRunning
 }
 
 func isJobStopped(status *v1beta1.JobStatus) bool {

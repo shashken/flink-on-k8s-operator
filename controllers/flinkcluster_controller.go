@@ -115,6 +115,7 @@ func (handler *FlinkClusterHandler) reconcile(
 	var k8sClient = handler.k8sClient
 	var flinkClient = handler.flinkClient
 	var log = handler.log
+	var debugLog = log.V(9)
 	var context = handler.context
 	var observed = &handler.observed
 	var desired = &handler.desired
@@ -147,6 +148,7 @@ func (handler *FlinkClusterHandler) reconcile(
 		log.Error(err, "Failed to sync flinkCluster history")
 		return ctrl.Result{}, err
 	}
+	log.Info("Cluster observed.")
 
 	log.Info("---------- 2. Update cluster status ----------")
 
@@ -176,34 +178,34 @@ func (handler *FlinkClusterHandler) reconcile(
 
 	*desired = getDesiredClusterState(observed, time.Now())
 	if desired.ConfigMap != nil {
-		log.Info("Desired state", "ConfigMap", *desired.ConfigMap)
+		debugLog.Info("Desired state", "ConfigMap", *desired.ConfigMap)
 	} else {
-		log.Info("Desired state", "ConfigMap", "nil")
+		debugLog.Info("Desired state", "ConfigMap", "nil")
 	}
 	if desired.JmStatefulSet != nil {
-		log.Info("Desired state", "JobManager StatefulSet", *desired.JmStatefulSet)
+		debugLog.Info("Desired state", "JobManager StatefulSet", *desired.JmStatefulSet)
 	} else {
-		log.Info("Desired state", "JobManager StatefulSet", "nil")
+		debugLog.Info("Desired state", "JobManager StatefulSet", "nil")
 	}
 	if desired.JmService != nil {
-		log.Info("Desired state", "JobManager service", *desired.JmService)
+		debugLog.Info("Desired state", "JobManager service", *desired.JmService)
 	} else {
-		log.Info("Desired state", "JobManager service", "nil")
+		debugLog.Info("Desired state", "JobManager service", "nil")
 	}
 	if desired.JmIngress != nil {
-		log.Info("Desired state", "JobManager ingress", *desired.JmIngress)
+		debugLog.Info("Desired state", "JobManager ingress", *desired.JmIngress)
 	} else {
-		log.Info("Desired state", "JobManager ingress", "nil")
+		debugLog.Info("Desired state", "JobManager ingress", "nil")
 	}
 	if desired.TmStatefulSet != nil {
-		log.Info("Desired state", "TaskManager StatefulSet", *desired.TmStatefulSet)
+		debugLog.Info("Desired state", "TaskManager StatefulSet", *desired.TmStatefulSet)
 	} else {
-		log.Info("Desired state", "TaskManager StatefulSet", "nil")
+		debugLog.Info("Desired state", "TaskManager StatefulSet", "nil")
 	}
 	if desired.Job != nil {
-		log.Info("Desired state", "Job", *desired.Job)
+		debugLog.Info("Desired state", "Job", *desired.Job)
 	} else {
-		log.Info("Desired state", "Job", "nil")
+		debugLog.Info("Desired state", "Job", "nil")
 	}
 
 	log.Info("---------- 4. Take actions ----------")
