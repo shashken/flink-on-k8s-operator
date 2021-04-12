@@ -34,8 +34,13 @@ data:
     EOF
     openssl req -nodes -new -x509 -keyout ca.key -out ca.crt -subj "/CN=Admission Controller Webhook CA"
     openssl genrsa -out ${tmpdir}/server-key.pem 2048
-    openssl req -new -key ${tmpdir}/server-key.pem -subj "/CN=${service}.${namespace}.svc" -config ${tmpdir}/csr.conf \
-        | openssl x509 -days 3650 -req -CA ca.crt -CAkey ca.key -CAcreateserial -out ${tmpdir}/server-cert.pem
+    openssl req -new -key ${tmpdir}/server-key.pem \
+      -subj "/CN=${service}.${namespace}.svc" \
+      -config ${tmpdir}/csr.conf \
+      | openssl x509 -extfile ${tmpdir}/csr.conf \
+        -extensions v3_req \
+        -days 3650 -req -CA ca.crt -CAkey ca.key -CAcreateserial \
+        -out ${tmpdir}/server-cert.pem
     serverCert="$(openssl base64 -A -in ${tmpdir}/server-cert.pem)"
     if [[ -z ${serverCert} ]]; then
         echo "ERROR: The signed certificate did not appear." >&2
@@ -136,7 +141,7 @@ spec:
         - "/bin/bash"
         - "-ec"
         - |
-          ls /cert_to_create  
+          ls /cert_to_create
           for cert in /cert_to_create/*;
             do
               bash $cert;
