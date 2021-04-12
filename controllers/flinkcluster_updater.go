@@ -80,7 +80,7 @@ func (updater *ClusterStatusUpdater) updateStatusIfChanged() (
 		return true, updater.updateClusterStatus(newStatus)
 	}
 
-	updater.log.Info("No status change", "state", oldStatus.State)
+	updater.log.V(9).Info("No status change", "state", oldStatus.State)
 	return false, nil
 }
 

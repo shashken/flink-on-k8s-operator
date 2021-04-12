@@ -54,7 +54,7 @@ type ClusterReconciler struct {
 }
 
 var progressRequeue = ctrl.Result{RequeueAfter: 10 * time.Second, Requeue: true}
-var savepointProgressRequeue = ctrl.Result{RequeueAfter: 60 * time.Second, Requeue: true}
+var delayedProgressRequeue = ctrl.Result{RequeueAfter: 60 * time.Second, Requeue: true}
 var errorRequeue = ctrl.Result{RequeueAfter: 10 * time.Second, Requeue: true}
 
 // Compares the desired state and the observed state, if there is a difference,
@@ -536,16 +536,18 @@ func (reconciler *ClusterReconciler) reconcileJob() (ctrl.Result, error) {
 				return progressRequeue, err
 			} else {
 				log.Info("Cant start upgrade yet, waiting for fresh Savepoint.")
-				return savepointProgressRequeue, err
+				return delayedProgressRequeue, err
 			}
 		} else if shouldRestartJob(restartPolicy, recordedJobStatus) {
 			log.Info("Job is about to be restarted to recover failure")
 			err := reconciler.restartJob()
 			return progressRequeue, err
+		} else {
+			log.Info("Should not update or restart, no action to take")
 		}
 
 		debugLog.Info("Job is still active, no action", "jobID", jobID)
-		return ctrl.Result{}, nil
+		return delayedProgressRequeue, nil
 	}
 
 	// Stop Flink job

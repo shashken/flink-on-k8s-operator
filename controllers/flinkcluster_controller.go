@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"github.com/googlecloudplatform/flink-operator/controllers/history"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -87,8 +88,10 @@ func (reconciler *FlinkClusterReconciler) Reconcile(
 func (reconciler *FlinkClusterReconciler) SetupWithManager(
 	mgr ctrl.Manager) error {
 	reconciler.Mgr = mgr
+	pred := predicate.GenerationChangedPredicate{}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1beta1.FlinkCluster{}).
+		WithEventFilter(pred).
 		Owns(&appsv1.Deployment{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&corev1.Service{}).
@@ -125,8 +128,8 @@ func (handler *FlinkClusterHandler) reconcile(
 	// History interface
 	var history = history.NewHistory(k8sClient, context)
 
-	log.Info("============================================================")
-	log.Info("---------- 1. Observe the current state ----------")
+	debugLog.Info("============================================================")
+	debugLog.Info("---------- 1. Observe the current state ----------")
 
 	var observer = ClusterStateObserver{
 		k8sClient:   k8sClient,
@@ -148,9 +151,9 @@ func (handler *FlinkClusterHandler) reconcile(
 		log.Error(err, "Failed to sync flinkCluster history")
 		return ctrl.Result{}, err
 	}
-	log.Info("Cluster observed.")
+	debugLog.Info("Cluster observed.")
 
-	log.Info("---------- 2. Update cluster status ----------")
+	debugLog.Info("---------- 2. Update cluster status ----------")
 
 	var updater = ClusterStatusUpdater{
 		k8sClient: k8sClient,
@@ -174,7 +177,7 @@ func (handler *FlinkClusterHandler) reconcile(
 		}, nil
 	}
 
-	log.Info("---------- 3. Compute the desired state ----------")
+	debugLog.Info("---------- 3. Compute the desired state ----------")
 
 	*desired = getDesiredClusterState(observed, time.Now())
 	if desired.ConfigMap != nil {
@@ -208,7 +211,7 @@ func (handler *FlinkClusterHandler) reconcile(
 		debugLog.Info("Desired state", "Job", "nil")
 	}
 
-	log.Info("---------- 4. Take actions ----------")
+	debugLog.Info("---------- 4. Take actions ----------")
 
 	var reconciler = ClusterReconciler{
 		k8sClient:   k8sClient,
@@ -223,8 +226,8 @@ func (handler *FlinkClusterHandler) reconcile(
 	if err != nil {
 		log.Error(err, "Failed to reconcile")
 	}
-	if result.RequeueAfter > 0 {
-		log.Info("Requeue reconcile request", "after", result.RequeueAfter)
+	if result.Requeue || result.RequeueAfter > time.Duration(0) {
+		log.Info("Requeue reconcile request", "after", result)
 	}
 
 	return result, err
