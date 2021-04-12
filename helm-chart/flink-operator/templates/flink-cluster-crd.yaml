@@ -6,6 +6,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.5.0
+    api-approved.kubernetes.io: unapproved
   creationTimestamp: null
   name: flinkclusters.flinkoperator.k8s.io
 spec:
