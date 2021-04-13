@@ -12,7 +12,7 @@ data:
   cert.sh: |-
     set -euxo pipefail
     service="flink-operator-webhook-service"
-    secret="webhook-server-cert"
+    certsOutputDir="/serving-certs"
     namespace={{ .Values.flinkOperatorNamespace.name }}
     csrName="${service}.${namespace}"
     tmpdir="$(mktemp -d)"
@@ -48,11 +48,9 @@ data:
     fi
     export CA_PEM_B64="$(echo ${serverCert})"
     # create the secret with CA cert and server cert/key
-    kubectl create secret generic ${secret} \
-            --from-file=tls.key=${tmpdir}/server-key.pem \
-            --from-file=tls.crt=${tmpdir}/server-cert.pem \
-            --dry-run -o yaml |
-        kubectl -n ${namespace} apply -f -
+    cp ${tmpdir}/server-key.pem ${certsOutputDir}/tls.key
+    cp ${tmpdir}/server-cert.pem ${certsOutputDir}/tls.crt
+    ls ${certsOutputDir}
     for webhook in /webhook_to_create/*;
     do
       echo $(cat $webhook | envsubst '${CA_PEM_B64}');
@@ -119,48 +117,4 @@ data:
         - UPDATE
         resources:
         - flinkclusters
----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: cert-job
-  namespace: {{ .Values.flinkOperatorNamespace.name }}
-  labels:
-    app.kubernetes.io/name: flink-operator
-    app.kubernetes.io/component: cert-job
-spec:
-  ttlSecondsAfterFinished: 300
-  backoffLimit: 0
-  completions: 1
-  parallelism: 1
-  template:
-    spec:
-      containers:
-      - command:
-        - "/bin/bash"
-        - "-ec"
-        - |
-          ls /cert_to_create
-          for cert in /cert_to_create/*;
-            do
-              bash $cert;
-          done
-        image: gcr.io/flink-operator/deployer:webhook-cert
-        imagePullPolicy: Always
-        name: create-cert
-        volumeMounts:
-        - name: cert-configmap
-          mountPath: "/cert_to_create/"
-        - name: webhook-configmap
-          mountPath: "/webhook_to_create/"
-      dnsPolicy: ClusterFirst
-      restartPolicy: Never
-      serviceAccountName: default
-      volumes:
-      - name: cert-configmap
-        configMap:
-          name: cert-configmap
-      - name: webhook-configmap
-        configMap:
-          name: webhook-configmap
 {{- end }}
