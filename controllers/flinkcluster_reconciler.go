@@ -528,23 +528,26 @@ func (reconciler *ClusterReconciler) reconcileJob() (ctrl.Result, error) {
 			}
 		}
 
+		if shouldRestartJob(restartPolicy, recordedJobStatus) {
+			log.Info("Job is about to be restarted to recover failure")
+			err := reconciler.restartJob()
+			return progressRequeue, err
+		}
+
 		// Update or recover Flink job by restart.
-		if shouldUpdateJob(observed) {
-			if reconciler.canStartJobUpgrade() {
+		if isUpdateTriggered(observed.cluster.Status) {
+			if canStartJobUpgrade(observed) {
 				log.Info("Job is about to be restarted to update")
 				err := reconciler.restartJob()
 				return progressRequeue, err
 			} else {
+				// TODO: If there is a savepoint, and too many times canStartJobUpgrade is false, upgrade anyway
 				log.Info("Cant start upgrade yet, waiting for fresh Savepoint.")
 				return delayedProgressRequeue, err
 			}
-		} else if shouldRestartJob(restartPolicy, recordedJobStatus) {
-			log.Info("Job is about to be restarted to recover failure")
-			err := reconciler.restartJob()
-			return progressRequeue, err
-		} else {
-			log.Info("Should not update or restart, no action to take")
 		}
+
+		log.Info("Should not update or restart, no action to take")
 
 		debugLog.Info("Job is still active, no action", "jobID", jobID)
 		return delayedProgressRequeue, nil
@@ -584,21 +587,6 @@ func (reconciler *ClusterReconciler) reconcileJob() (ctrl.Result, error) {
 	}
 
 	return ctrl.Result{}, nil
-}
-
-func (reconciler *ClusterReconciler) canStartJobUpgrade() bool {
-	const oneHour = 60 * 60
-	var job = reconciler.observed.cluster.Status.Components.Job
-
-	if !*reconciler.observed.cluster.Spec.Job.TakeSavepointOnUpgrade {
-		return true // No need to wait for a fresh savepoint
-	}
-
-	if len(job.LastSavepointTime) == 0 {
-		return false // First savepoint.
-	}
-	var spExpiredTime = getTimeAfterAddedSeconds(job.LastSavepointTime, oneHour)
-	return time.Now().Before(spExpiredTime)
 }
 
 func (reconciler *ClusterReconciler) createJob(job *batchv1.Job) error {
@@ -788,6 +776,12 @@ func (reconciler *ClusterReconciler) shouldTakeSavepoint() (bool, string) {
 		return false, ""
 	}
 
+	// Validate that we did not trigger 2 parallel SPs
+	var nextOkTriggerTime = getTimeAfterAddedSeconds(jobStatus.LastSavepointTriggerTime, SavepointTimeoutSec)
+	if time.Now().Before(nextOkTriggerTime) {
+		return false, ""
+	}
+
 	// User requested.
 
 	// In the case of which savepoint status is in finished state,
@@ -812,14 +806,8 @@ func (reconciler *ClusterReconciler) shouldTakeSavepoint() (bool, string) {
 		return true, v1beta1.SavepointTriggerReasonUserRequested
 	}
 
-	// Validate that we did not trigger 2 parallel SPs
-	var nextOkTriggerTime = getTimeAfterAddedSeconds(jobStatus.LastSavepointTriggerTime, SavepointTimeoutSec)
-	if time.Now().Before(nextOkTriggerTime) {
-		return false, ""
-	}
-
 	// Job upgrade is triggered, but it cant be performed yet because SP is too old, trigger a new one.
-	if shouldUpdateJob(reconciler.observed) && !reconciler.canStartJobUpgrade() {
+	if isUpdateTriggered(reconciler.observed.cluster.Status) && !canStartJobUpgrade(reconciler.observed) {
 		return true, v1beta1.SavepointTriggerReasonUpdate
 	}
 

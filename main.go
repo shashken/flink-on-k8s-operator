@@ -52,10 +52,8 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
-	var devMode bool
 	var watchNamespace string
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	flag.BoolVar(&devMode, "dev-mode", true, "Should show logs in dev mode")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(
 		&watchNamespace,

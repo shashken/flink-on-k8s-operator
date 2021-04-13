@@ -160,9 +160,22 @@ func shouldRestartJob(
 }
 
 func shouldUpdateJob(observed ObservedClusterState) bool {
-	var jobStatus = observed.cluster.Status.Components.Job
-	var readyToUpdate = jobStatus == nil || isJobStopped(jobStatus) || isSavepointUpToDate(observed.observeTime, *jobStatus)
-	return isUpdateTriggered(observed.cluster.Status) && readyToUpdate
+	return isUpdateTriggered(observed.cluster.Status) && canStartJobUpgrade(observed)
+}
+
+func canStartJobUpgrade(observed ObservedClusterState) bool {
+	const oneHour = 60 * 60
+	var job = observed.cluster.Status.Components.Job
+
+	if !*observed.cluster.Spec.Job.TakeSavepointOnUpgrade {
+		return true // No need to wait for a fresh savepoint
+	}
+
+	if len(job.LastSavepointTime) == 0 {
+		return false // First savepoint.
+	}
+	var spExpiredTime = getTimeAfterAddedSeconds(job.LastSavepointTime, oneHour)
+	return time.Now().Before(spExpiredTime)
 }
 
 func getFromSavepoint(jobSpec batchv1.JobSpec) string {
