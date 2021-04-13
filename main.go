@@ -52,18 +52,23 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var devMode bool
 	var watchNamespace string
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
-		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&devMode, "dev-mode", true, "Should show logs in dev mode")
+	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(
 		&watchNamespace,
 		"watch-namespace",
 		"",
 		"Watch custom resources in the namespace, ignore other namespaces. If empty, all namespaces will be watched.")
+	opts := zap.Options{}
+	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	ctrl.SetLogger(zap.Logger(true))
+	// Setup logger with the parsed flags.
+	log := zap.New(zap.UseFlagOptions(&opts))
+	ctrl.SetLogger(log)
 
 	syncPeriod := time.Hour
 
