@@ -227,7 +227,7 @@ func (handler *FlinkClusterHandler) reconcile(
 		log.Error(err, "Failed to reconcile")
 	}
 	if result.Requeue || result.RequeueAfter > time.Duration(0) {
-		log.Info("Requeue reconcile request", "after", result)
+		debugLog.Info("Requeue reconcile request", "after", result)
 	}
 
 	return result, err
