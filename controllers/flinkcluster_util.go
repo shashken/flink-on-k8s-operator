@@ -20,7 +20,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	v1beta1 "github.com/googlecloudplatform/flink-operator/api/v1beta1"
+	"github.com/googlecloudplatform/flink-operator/api/v1beta1"
+	"github.com/googlecloudplatform/flink-operator/controllers/flinkclient"
 	"github.com/googlecloudplatform/flink-operator/controllers/history"
 	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -42,7 +43,8 @@ const (
 	ControlRetries            = "retries"
 	ControlMaxRetries         = "3"
 
-	SavepointTimeoutSec = 900 // 15 mins
+	SavepointTimeoutSec    = 60 * 15 // 15 mins
+	minTimeBetweenTriggers = 60 * 3  // 3 mins
 
 	RevisionNameLabel = "flinkoperator.k8s.io/revision-name"
 
@@ -174,8 +176,38 @@ func canStartJobUpgrade(observed ObservedClusterState) bool {
 	if len(job.LastSavepointTime) == 0 {
 		return false // First savepoint.
 	}
-	var spExpiredTime = getTimeAfterAddedSeconds(job.LastSavepointTime, oneHour)
-	return time.Now().Before(spExpiredTime)
+
+	if time.Now().Before(getTimeAfterAddedSeconds(job.LastSavepointTime, oneHour)) {
+		return true
+	}
+
+	return false
+}
+
+func jobHopelessStartUpgrade(observed ObservedClusterState, uptimeStatus flinkclient.JobUptimeStatus, jobID string) bool {
+	const oneHour = 60 * 60
+	job := observed.cluster.Status.Components.Job
+	lastValidTime := getTimeAfterAddedSeconds(job.LastSavepointTime, oneHour*4)
+	savepointStatus := observed.cluster.Status.Savepoint
+
+	if len(job.LastSavepointTime) == 0 || time.Now().After(lastValidTime) {
+		return false // First savepoint.
+	}
+
+	// Last savepoint meets the time requirement, its fair to restart the job.
+	// Just make sure job is not hopeless to complete a savepoint.
+
+	uptime := time.Duration(uptimeStatus.DurationMillis) * time.Millisecond
+
+	if time.Now().Before(getTimeAfterAddedSeconds(job.LastSavepointTriggerTime, 120)) {
+		return false // SP was triggered less than 2 mins ago, wait.
+	}
+
+	if uptime.Minutes() > 20 && uptimeStatus.State == v1beta1.JobStateRunning && savepointStatus.State == v1beta1.SavepointStateInProgress {
+		return false
+	}
+
+	return true
 }
 
 func getFromSavepoint(jobSpec batchv1.JobSpec) string {

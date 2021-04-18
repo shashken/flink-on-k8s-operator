@@ -541,9 +541,20 @@ func (reconciler *ClusterReconciler) reconcileJob() (ctrl.Result, error) {
 				err := reconciler.restartJob()
 				return progressRequeue, err
 			} else {
-				// TODO: If there is a savepoint, and too many times canStartJobUpgrade is false, upgrade anyway
-				log.Info("Cant start upgrade yet, waiting for fresh Savepoint.")
-				return delayedProgressRequeue, err
+				uptimeStatus := flinkclient.JobUptimeStatus{}
+				err := reconciler.flinkClient.GetJobUptime(getFlinkAPIBaseURL(observed.cluster), jobID, &uptimeStatus)
+				if err != nil {
+					log.Error(err, "Error getting job uptime status with flink client")
+				}
+				if jobHopelessStartUpgrade(observed, uptimeStatus, jobID) {
+					log.Info("Job is hopeless but savepoint meets the max time requirement. Restarting!")
+					err := reconciler.restartJob()
+					return progressRequeue, err
+				} else {
+					// TODO: Job is hopeless to run again and there is no valid SP, user must interveane.
+					log.Info("Cant start upgrade yet, waiting for fresh Savepoint.")
+					return delayedProgressRequeue, err
+				}
 			}
 		}
 
@@ -777,7 +788,7 @@ func (reconciler *ClusterReconciler) shouldTakeSavepoint() (bool, string) {
 	}
 
 	// Validate that we did not trigger 2 parallel SPs
-	var nextOkTriggerTime = getTimeAfterAddedSeconds(jobStatus.LastSavepointTriggerTime, SavepointTimeoutSec)
+	var nextOkTriggerTime = getTimeAfterAddedSeconds(jobStatus.LastSavepointTriggerTime, minTimeBetweenTriggers)
 	if time.Now().Before(nextOkTriggerTime) {
 		return false, ""
 	}

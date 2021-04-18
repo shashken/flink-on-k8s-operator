@@ -41,6 +41,14 @@ type JobStatus struct {
 	Status string
 }
 
+type JobUptimeStatus struct {
+	State          string `json:"state"`
+	Start          int64  `json:"start-time"`
+	End            int64  `json:"end-time"`
+	DurationMillis int64  `json:"duration"`
+	Now            int64  `json:"now"`
+}
+
 // JobStatusList defines Flink job status list.
 type JobStatusList struct {
 	Jobs []JobStatus
@@ -88,6 +96,13 @@ func (s *SavepointStatus) IsFailed() bool {
 func (c *FlinkClient) GetJobStatusList(
 	apiBaseURL string, jobStatusList *JobStatusList) error {
 	return c.HTTPClient.Get(apiBaseURL+"/jobs", jobStatusList)
+}
+
+// GetJobUptime gets Flink job uptime status
+func (c *FlinkClient) GetJobUptime(
+	apiBaseURL string, jobID string, jobUptime *JobUptimeStatus) error {
+	url := fmt.Sprintf("%s/jobs/%s", apiBaseURL, jobID)
+	return c.HTTPClient.Get(url, jobUptime)
 }
 
 // StopJob stops a job.
